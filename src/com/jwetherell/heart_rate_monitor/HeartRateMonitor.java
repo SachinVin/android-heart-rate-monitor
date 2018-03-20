@@ -1,7 +1,6 @@
-package com.jwetherell.heart_rate_monitor;
+package com.example.sachin.heart;
 
-import java.util.concurrent.atomic.AtomicBoolean;
-
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.res.Configuration;
@@ -16,6 +15,8 @@ import android.view.SurfaceView;
 import android.view.View;
 import android.widget.TextView;
 
+import java.util.concurrent.atomic.AtomicBoolean;
+
 
 /**
  * This class extends Activity to handle a picture preview, process the preview
@@ -28,11 +29,16 @@ public class HeartRateMonitor extends Activity {
     private static final String TAG = "HeartRateMonitor";
     private static final AtomicBoolean processing = new AtomicBoolean(false);
 
-    private static SurfaceView preview = null;
     private static SurfaceHolder previewHolder = null;
     private static Camera camera = null;
+    @SuppressLint("StaticFieldLeak")
     private static View image = null;
+    @SuppressLint("StaticFieldLeak")
     private static TextView text = null;
+    @SuppressLint("StaticFieldLeak")
+    private static TextView imgavgtxt = null;
+    @SuppressLint("StaticFieldLeak")
+    private static TextView rollavgtxt = null;
 
     private static WakeLock wakeLock = null;
 
@@ -64,13 +70,15 @@ public class HeartRateMonitor extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
 
-        preview = (SurfaceView) findViewById(R.id.preview);
+        SurfaceView preview = (SurfaceView) findViewById(R.id.preview);
         previewHolder = preview.getHolder();
         previewHolder.addCallback(surfaceCallback);
         previewHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
 
         image = findViewById(R.id.image);
-        text = (TextView) findViewById(R.id.text);
+        text = findViewById(R.id.text);
+        imgavgtxt = findViewById(R.id.img_avg_text);
+        rollavgtxt = findViewById(R.id.rollavg_text);
 
         PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
         wakeLock = pm.newWakeLock(PowerManager.FULL_WAKE_LOCK, "DoNotDimScreen");
@@ -91,7 +99,7 @@ public class HeartRateMonitor extends Activity {
     public void onResume() {
         super.onResume();
 
-        wakeLock.acquire();
+        wakeLock.acquire(10*60*1000L /*10 minutes*/);
 
         camera = Camera.open();
 
@@ -147,6 +155,9 @@ public class HeartRateMonitor extends Activity {
 
             int rollingAverage = (averageArrayCnt > 0) ? (averageArrayAvg / averageArrayCnt) : 0;
             TYPE newType = currentType;
+
+            imgavgtxt.setText("image average:"+ Integer.toString(imgAvg));
+            rollavgtxt.setText("rolling average:"+ Integer.toString(rollingAverage));
             if (imgAvg < rollingAverage) {
                 newType = TYPE.RED;
                 if (newType != currentType) {
@@ -195,7 +206,7 @@ public class HeartRateMonitor extends Activity {
                     }
                 }
                 int beatsAvg = (beatsArrayAvg / beatsArrayCnt);
-                text.setText(String.valueOf(beatsAvg));
+                text.setText(String.valueOf(beatsAvg)+" bpm");
                 startTime = System.currentTimeMillis();
                 beats = 0;
             }
@@ -214,7 +225,7 @@ public class HeartRateMonitor extends Activity {
                 camera.setPreviewDisplay(previewHolder);
                 camera.setPreviewCallback(previewCallback);
             } catch (Throwable t) {
-                Log.e("PreviewDemo-surfaceCallback", "Exception in setPreviewDisplay()", t);
+                Log.e("Preview-surfaceCallback", "Exception in setPreviewDisplay()", t);
             }
         }
 
